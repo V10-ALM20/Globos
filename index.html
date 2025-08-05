@@ -1076,6 +1076,7 @@
                     <div class="bg-white border rounded-lg shadow-sm overflow-hidden group transition-transform duration-300 hover:shadow-xl flex flex-col h-full">
                         <div class="relative cursor-pointer">
                             <img src="${product.url}" 
+                                loading="lazy"
                                 onclick="openLightbox('${product.url}')"
                                 onerror="this.onerror=null;this.src='https://placehold.co/400x400/f0f0f0/333?text=Imagen+no+disponible';" 
                                 alt="Imagen de ${product.descripcion}" class="w-full h-56 object-contain">
@@ -1327,3 +1328,4 @@
     </script>
 </body>
 </html>
+
