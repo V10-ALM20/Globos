@@ -87,6 +87,13 @@
         <div id="product-list" class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-6">
             <!-- Product cards will be injected by JS -->
         </div>
+
+        <!-- Pagination Controls -->
+        <div id="load-more-container" class="flex justify-center items-center mt-8">
+            <button id="load-more-btn" class="bg-rey-red text-white font-bold py-2 px-6 rounded-lg hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
+                Cargar más
+            </button>
+        </div>
     </main>
 
     <!-- =========== Footer =========== -->
@@ -129,25 +136,21 @@
         </div>
     </div>
 
-    <!-- =========== Lightbox Modal for Images (UPDATED) =========== -->
+    <!-- =========== Lightbox Modal for Images =========== -->
     <div id="lightbox-modal-container" class="fixed inset-0 bg-black bg-opacity-75 flex justify-center items-center pointer-events-none opacity-0 z-[60]">
-        <!-- Added p-4 to provide padding on all sides, and adjusted max-h for better responsiveness -->
         <div class="relative p-4 max-w-full max-h-full">
             <button id="close-lightbox-button" class="absolute top-4 right-4 text-white bg-black bg-opacity-50 rounded-full p-1 hover:bg-opacity-75 transition-colors">
                 <svg class="h-8 w-8" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
                 </svg>
             </button>
-            <!-- Adjusted class to ensure image fits within the viewport. `object-contain` is key here. -->
             <img id="lightbox-image" src="" alt="Imagen ampliada" class="max-w-full max-h-[90vh] object-contain rounded-lg shadow-xl">
         </div>
     </div>
 
-    <script>
-        document.addEventListener('DOMContentLoaded', () => {
-            // --- PRODUCT DATA ---
-            // The price data has been removed from all products as per the user's request.
-            const products = [
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const products = [
                 { sku: "0291201", descripcion: "GLOBO LATEX HAPPY BIRTHDAY 10U", url: "https://stscaiprod.blob.core.windows.net/0291201/UD/1505151219473282074.jpg" },
 		{ sku: "0293664", descripcion: "GLOBO LATEX ESTAMPADO BLIPPI", url: "https://stscaiprod.blob.core.windows.net/0293664/UD/1505151216403281098.jpg" },
 		{ sku: "0293394", descripcion: "GLOBO LATEX ESTAMP FIGURAS 10U", url: "https://stscaiprod.blob.core.windows.net/0293394/UD/1505151217684280082.jpg" },
@@ -1058,51 +1061,82 @@
 { sku: "0084565", descripcion: "GLOBO TRANS C/PLUMAS 20PULG", url: "https://stscaiprod.blob.core.windows.net/0084565/UD/1505150174919147417.JPG" },
 { sku: "0105405", descripcion: "GLOBO LATEX LISO 12PULG 10UND", url: "https://stscaiprod.blob.core.windows.net/0105405/UD/1505150225376147104.jpg" },
 { sku: "0105406", descripcion: "GLOBOS LATEX 12PULG 10PZAS", url: "https://stscaiprod.blob.core.windows.net/0105406/UD/1505150225390147102.jpg" },
-
             ];
 
             // Container references
             const productListContainer = document.getElementById('product-list');
             let cart = [];
 
-            // --- INJECT PRODUCTS INTO GRID ---
-            products.forEach(product => {
-                // The SKU is extracted from the URL for uniqueness
-                const urlParts = product.url.split('/');
-                const filename = urlParts[urlParts.length - 1];
-                const sku = filename.split('.')[0];
+            // --- NUEVAS VARIABLES PARA "CARGAR MÁS" ---
+            const productsPerLoad = 60;
+            let productsToShow = productsPerLoad;
+            const loadMoreBtn = document.getElementById('load-more-btn');
+            const loadMoreContainer = document.getElementById('load-more-container');
+
+            // --- NUEVA FUNCIÓN PARA RENDERIZAR LOS PRODUCTOS VISIBLES ---
+            const renderProducts = () => {
+                productListContainer.innerHTML = ''; // Clear existing products
                 
-                const productHTML = `
-                    <div class="bg-white border rounded-lg shadow-sm overflow-hidden group transition-transform duration-300 hover:shadow-xl flex flex-col h-full">
-                        <div class="relative cursor-pointer">
-                            <img src="${product.url}" 
-                                loading="lazy"
-                                onclick="openLightbox('${product.url}')"
-                                onerror="this.onerror=null;this.src='https://placehold.co/400x400/f0f0f0/333?text=Imagen+no+disponible';" 
-                                alt="Imagen de ${product.descripcion}" class="w-full h-56 object-contain">
-                        </div>
-                        <div class="p-4 flex-grow flex flex-col">
-                            <h3 class="text-lg font-semibold text-gray-800 flex-grow">${product.descripcion}</h3>
-                            <p class="text-sm text-gray-500 mt-1">SKU: ${sku}</p>
-                            <div class="flex items-center justify-between mt-4">
-                                <div class="flex items-center border rounded-lg overflow-hidden">
-                                    <button class="quantity-control p-2 bg-gray-200 hover:bg-gray-300 text-gray-700 font-bold" data-sku="${sku}" data-action="decrease">-</button>
-                                    <input type="number" min="1" value="1" data-sku="${sku}" class="quantity-input-product w-12 text-center text-gray-700 outline-none focus:ring-0">
-                                    <button class="quantity-control p-2 bg-gray-200 hover:bg-gray-300 text-gray-700 font-bold" data-sku="${sku}" data-action="increase">+</button>
+                // Show a slice of the products array
+                const productsToRender = products.slice(0, productsToShow);
+
+                productsToRender.forEach(product => {
+                    const urlParts = product.url.split('/');
+                    const filename = urlParts[urlParts.length - 1];
+                    const sku = filename.split('.')[0];
+                    
+                    const productHTML = `
+                        <div class="bg-white border rounded-lg shadow-sm overflow-hidden group transition-transform duration-300 hover:shadow-xl flex flex-col h-full">
+                            <div class="relative cursor-pointer">
+                                <img src="${product.url}" 
+                                    loading="lazy"
+                                    onclick="openLightbox('${product.url}')"
+                                    onerror="this.onerror=null;this.src='https://placehold.co/400x400/f0f0f0/333?text=Imagen+no+disponible';" 
+                                    alt="Imagen de ${product.descripcion}" class="w-full h-56 object-contain">
+                            </div>
+                            <div class="p-4 flex-grow flex flex-col">
+                                <h3 class="text-lg font-semibold text-gray-800 flex-grow">${product.descripcion}</h3>
+                                <p class="text-sm text-gray-500 mt-1">SKU: ${sku}</p>
+                                <div class="flex items-center justify-between mt-4">
+                                    <div class="flex items-center border rounded-lg overflow-hidden">
+                                        <button class="quantity-control p-2 bg-gray-200 hover:bg-gray-300 text-gray-700 font-bold" data-sku="${sku}" data-action="decrease">-</button>
+                                        <input type="number" min="1" value="1" data-sku="${sku}" class="quantity-input-product w-12 text-center text-gray-700 outline-none focus:ring-0">
+                                        <button class="quantity-control p-2 bg-gray-200 hover:bg-gray-300 text-gray-700 font-bold" data-sku="${sku}" data-action="increase">+</button>
+                                    </div>
+                                    <button class="add-to-cart-btn bg-rey-red text-white font-bold py-2 px-4 rounded-lg hover:bg-red-700 transition-colors duration-300"
+                                            data-sku="${sku}"
+                                            data-descripcion="${product.descripcion}">
+                                        Agregar
+                                    </button>
                                 </div>
-                                <button class="add-to-cart-btn bg-rey-red text-white font-bold py-2 px-4 rounded-lg hover:bg-red-700 transition-colors duration-300"
-                                        data-sku="${sku}"
-                                        data-descripcion="${product.descripcion}">
-                                    Agregar
-                                </button>
                             </div>
                         </div>
-                    </div>
-                `;
-                productListContainer.innerHTML += productHTML;
+                    `;
+                    productListContainer.innerHTML += productHTML;
+                });
+            };
+
+            // --- FUNCIÓN PARA ACTUALIZAR EL BOTÓN DE "CARGAR MÁS" ---
+            const updateLoadMoreButton = () => {
+                if (productsToShow >= products.length) {
+                    loadMoreContainer.style.display = 'none'; // Oculta el botón si no hay más productos
+                } else {
+                    loadMoreContainer.style.display = 'flex'; // Asegura que el botón sea visible
+                }
+            };
+
+            // --- EVENT LISTENER PARA EL BOTÓN DE "CARGAR MÁS" ---
+            loadMoreBtn.addEventListener('click', () => {
+                productsToShow += productsPerLoad; // Aumenta la cantidad de productos a mostrar
+                renderProducts(); // Vuelve a renderizar la lista con la nueva cantidad
+                updateLoadMoreButton(); // Actualiza la visibilidad del botón
             });
 
-            // --- CART FUNCTIONALITY ---
+            // --- INICIALIZACIÓN ---
+            renderProducts();
+            updateLoadMoreButton();
+
+            // --- CART FUNCTIONALITY (UNMODIFIED) ---
             const cartButton = document.getElementById('cart-button');
             const closeCartButton = document.getElementById('close-cart-button');
             const cartModalContainer = document.getElementById('cart-modal-container');
@@ -1129,18 +1163,15 @@
                 }
             });
 
-            // Add to cart button click listener (event delegation)
             productListContainer.addEventListener('click', (e) => {
                 if (e.target.classList.contains('add-to-cart-btn')) {
                     const { sku, descripcion } = e.target.dataset;
-                    // Get the quantity from the input next to the clicked button
                     const quantityInput = e.target.closest('.flex').querySelector('.quantity-input-product');
                     const quantity = parseInt(quantityInput.value);
                     addToCart(sku, descripcion, quantity);
                 }
             });
             
-            // Quantity controls on product cards (for + and - buttons)
             productListContainer.addEventListener('click', (e) => {
                 if (e.target.classList.contains('quantity-control')) {
                     const sku = e.target.dataset.sku;
@@ -1157,11 +1188,9 @@
                 }
             });
 
-            // Add change listener for manual input on product cards
             productListContainer.addEventListener('change', (e) => {
                 if (e.target.classList.contains('quantity-input-product')) {
                     let newQuantity = parseInt(e.target.value);
-                    // Ensure quantity is at least 1
                     if (isNaN(newQuantity) || newQuantity < 1) {
                         e.target.value = 1;
                     }
@@ -1177,7 +1206,7 @@
                     cart.push({ sku, descripcion, quantity });
                 }
                 updateCartCounter();
-                openCart(); // open cart modal automatically when adding
+                openCart();
             };
 
             const updateCartCounter = () => {
@@ -1214,19 +1243,19 @@
                         cartItemsContainer.appendChild(itemElement);
                     });
                 }
-                addCartItemEventListeners(); // Re-add event listeners for new elements
+                addCartItemEventListeners();
             };
 
             const addCartItemEventListeners = () => {
                 document.querySelectorAll('.quantity-change').forEach(button => {
-                    button.onclick = (e) => { // Use onclick to easily reassign
+                    button.onclick = (e) => {
                         const { sku, change } = e.target.dataset;
                         changeQuantity(sku, parseInt(change));
                     };
                 });
 
                 document.querySelectorAll('.quantity-input').forEach(input => {
-                    input.onchange = (e) => { // Use onchange to easily reassign
+                    input.onchange = (e) => {
                         const sku = e.target.dataset.sku;
                         let newQuantity = parseInt(e.target.value);
                         if (isNaN(newQuantity) || newQuantity < 1) newQuantity = 1;
@@ -1240,7 +1269,7 @@
                 });
 
                 document.querySelectorAll('.remove-from-cart-btn').forEach(button => {
-                    button.onclick = (e) => { // Use onclick to easily reassign
+                    button.onclick = (e) => {
                         const skuToRemove = e.target.closest('button').dataset.sku;
                         removeFromCart(skuToRemove);
                     };
@@ -1252,7 +1281,7 @@
                 if (!item) return;
 
                 item.quantity += change;
-                if (item.quantity < 1) item.quantity = 1; // Prevent quantity from going below 1
+                if (item.quantity < 1) item.quantity = 1;
 
                 updateCartCounter();
                 renderCart();
@@ -1264,7 +1293,6 @@
                 renderCart();
             };
 
-            // --- SHARE BUTTONS ---
             const shareEmailBtn = document.getElementById('share-email');
             const shareWhatsappBtn = document.getElementById('share-whatsapp');
 
@@ -1289,43 +1317,33 @@
                 window.open(`https://wa.me/?text=${text}`, '_blank');
             });
 
-            // --- LIGHTBOX FUNCTIONALITY (UPDATED) ---
             const lightboxContainer = document.getElementById('lightbox-modal-container');
             const lightboxImage = document.getElementById('lightbox-image');
             const closeLightboxBtn = document.getElementById('close-lightbox-button');
 
-            // Opens the lightbox with the provided image URL
             window.openLightbox = (imageUrl) => {
                 lightboxImage.src = imageUrl;
                 lightboxContainer.classList.remove('pointer-events-none', 'opacity-0');
                 lightboxContainer.classList.add('pointer-events-auto', 'opacity-100');
-                // Previene el scroll en el cuerpo de la página
                 document.body.style.overflow = 'hidden';
             };
 
-            // Closes the lightbox
             const closeLightbox = () => {
                 lightboxContainer.classList.remove('pointer-events-auto', 'opacity-100');
                 lightboxContainer.classList.add('pointer-events-none', 'opacity-0');
-                // Clear image src to save memory
                 lightboxImage.src = '';
-                // Restaura el scroll en el cuerpo de la página
                 document.body.style.overflow = '';
             };
 
-            // Add event listeners for closing the lightbox
             closeLightboxBtn.addEventListener('click', closeLightbox);
             lightboxContainer.addEventListener('click', (e) => {
-                // Close only if the click is on the background, not the image itself
                 if (e.target === lightboxContainer || e.target === closeLightboxBtn) {
                     closeLightbox();
                 }
             });
 
-            // Inicializa contador vacío
             updateCartCounter();
         });
     </script>
 </body>
 </html>
-
