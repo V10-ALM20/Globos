@@ -1081,9 +1081,8 @@
                 const productsToRender = products.slice(0, productsToShow);
 
                 productsToRender.forEach(product => {
-                    const urlParts = product.url.split('/');
-                    const filename = urlParts[urlParts.length - 1];
-                    const sku = filename.split('.')[0];
+                    // El SKU se obtiene directamente del objeto del producto, no de la URL
+                    const sku = product.sku;
                     
                     const productHTML = `
                         <div class="bg-white border rounded-lg shadow-sm overflow-hidden group transition-transform duration-300 hover:shadow-xl flex flex-col h-full">
@@ -1347,3 +1346,4 @@
     </script>
 </body>
 </html>
+
